@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=1280,height=800,initial-scale=1">
+    <title>页签备注脱敏演示截图</title>
+    <style>
+      * { box-sizing: border-box; }
+      html, body { width: 1280px; height: 800px; margin: 0; overflow: hidden; }
+      body { color: #edf1f8; background: #171920; font: 14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif; }
+      .browser { height: 800px; border: 1px solid #3a3e48; background: #20232b; }
+      .tabbar { height: 58px; display: flex; align-items: end; gap: 5px; padding: 10px 16px 0; background: #171920; }
+      .traffic { display: flex; align-self: center; gap: 7px; width: 74px; margin-bottom: 8px; }
+      .traffic i { width: 11px; height: 11px; border-radius: 50%; background: var(--c); }
+      .tab { width: 248px; height: 38px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border-radius: 11px 11px 0 0; color: #aeb7c8; background: #292d36; }
+      .tab.active { color: #fff; background: #343944; }
+      .tab .favicon { width: 17px; height: 17px; display: grid; place-items: center; border-radius: 5px; color: #fff; background: var(--c); font-size: 10px; font-weight: 800; }
+      .tab span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+      .plus { margin: 0 0 10px 6px; color: #9da7b7; font-size: 21px; }
+      .toolbar { height: 52px; display: flex; align-items: center; gap: 13px; padding: 0 18px; border-bottom: 1px solid #3a3f4a; background: #343944; }
+      .nav { color: #aab3c2; font-size: 19px; letter-spacing: 8px; }
+      .address { height: 34px; flex: 1; display: flex; align-items: center; gap: 9px; padding: 0 14px; border-radius: 18px; color: #c9d1de; background: #252932; }
+      .lock { width: 15px; height: 15px; display: grid; place-items: center; border-radius: 50%; color: #8fa0b9; font-size: 10px; }
+      .toolbar-badge { padding: 5px 10px; border-radius: 10px; color: #c8d6f6; background: #46567a; font-size: 12px; }
+      .content { height: 688px; display: grid; grid-template-columns: 900px 380px; }
+      .site { position: relative; overflow: hidden; color: #28232a; background: #f7f4f2; }
+      .site-head { height: 70px; display: flex; align-items: center; justify-content: space-between; padding: 0 42px; border-bottom: 1px solid #eadfdd; background: rgba(255,255,255,.92); }
+      .brand { display: flex; align-items: center; gap: 11px; font-size: 22px; font-weight: 800; }
+      .brand-mark { width: 31px; height: 31px; display: grid; place-items: center; border-radius: 10px; color: #fff; background: linear-gradient(135deg,#ff3158,#d71843); font-size: 15px; }
+      .site-nav { display: flex; gap: 25px; color: #756d72; font-size: 13px; }
+      .hero { display: grid; grid-template-columns: 1.06fr .94fr; gap: 48px; padding: 58px 64px 30px; }
+      .hero-copy { padding-top: 28px; }
+      .eyebrow { color: #e3264f; font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+      .hero h1 { width: 430px; margin: 15px 0 18px; color: #231d22; font-size: 47px; line-height: 1.08; letter-spacing: -.04em; }
+      .hero p { width: 420px; margin: 0; color: #766e73; font-size: 17px; line-height: 1.7; }
+      .pills { display: flex; gap: 9px; margin-top: 26px; }
+      .pill { padding: 8px 13px; border: 1px solid #eadbdd; border-radius: 99px; color: #6f6269; background: #fff; font-size: 12px; }
+      .phone { width: 310px; height: 460px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 18px; border: 9px solid #29232a; border-radius: 38px; background: #fff; box-shadow: 0 26px 70px rgba(80,45,55,.18); }
+      .card-photo { min-height: 128px; border-radius: 14px; background: linear-gradient(145deg,var(--a),var(--b)); }
+      .card-photo.tall { min-height: 185px; }
+      .caption { margin: 7px 3px 13px; color: #51484e; font-size: 10px; }
+      .caption::after { content:""; display: block; width: 58%; height: 5px; margin-top: 6px; border-radius: 4px; background: #eadfe1; }
+      .privacy { position: absolute; left: 64px; bottom: 38px; display: flex; align-items: center; gap: 9px; color: #746970; font-size: 12px; }
+      .privacy i { width: 9px; height: 9px; border-radius: 50%; background: #61ddaa; box-shadow: 0 0 0 4px rgba(97,221,170,.18); }
+      .panel { padding: 22px 18px; overflow: hidden; border-left: 1px solid #3b404a; background: #22262e; }
+      .panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 17px; }
+      .panel-head h2 { margin: 0; font-size: 21px; }
+      .local { padding: 4px 9px; border: 1px solid #596171; border-radius: 99px; color: #aeb7c6; font-size: 10px; }
+      .note-card { padding: 16px; border: 1px solid #454b58; border-radius: 15px; background: #292e37; }
+      .note-card h3 { margin: 0 0 13px; font-size: 14px; }
+      label { display: block; margin: 10px 0 5px; color: #aeb7c6; font-size: 10px; font-weight: 700; }
+      .field { min-height: 36px; padding: 9px 10px; border: 1px solid #4b5260; border-radius: 8px; color: #eef2f8; background: #23272f; }
+      .field.note { min-height: 62px; }
+      .row { display: grid; grid-template-columns: 1fr auto; gap: 9px; }
+      .colors { display: flex; align-items: center; gap: 6px; padding-top: 4px; }
+      .colors i { width: 20px; height: 20px; border-radius: 50%; background: var(--c); }
+      .colors i.selected { box-shadow: 0 0 0 3px #f1f4fa,0 0 0 5px #6b778b; }
+      .preview { margin-top: 12px; padding: 9px; border: 1px dashed #657087; border-radius: 8px; color: #dce4f3; font-size: 10px; }
+      .save { width: max-content; margin: 12px 0 0 auto; padding: 8px 13px; border-radius: 8px; color: #fff; background: #5f87ec; font-weight: 750; }
+      .list-title { margin: 18px 0 8px; font-size: 13px; }
+      .item { margin-top: 7px; padding: 9px 10px; border-radius: 9px; background: #2b3854; }
+      .item strong, .item span { display: block; }
+      .item strong { font-size: 12px; }.item span { color: #9eabc1; font-size: 9px; }
+    </style>
+  </head>
+  <body>
+    <section class="browser">
+      <header class="tabbar">
+        <div class="traffic"><i style="--c:#ff5f57"></i><i style="--c:#febc2e"></i><i style="--c:#28c840"></i></div>
+        <div class="tab active"><b class="favicon" style="--c:#e3264f">R</b><span>🩷 Rednote｜Rednote 是小红书的英文名</span></div>
+        <div class="tab"><b class="favicon" style="--c:#5f87ec">D</b><span>Dots3 Note Preview</span></div>
+        <div class="tab"><b class="favicon" style="--c:#5a626f">G</b><span>Chrome Extensions Documentation</span></div>
+        <div class="plus">＋</div>
+      </header>
+      <div class="toolbar"><span class="nav">‹ › ↻</span><div class="address"><span class="lock">●</span>https://www.rednote.com/</div><span class="toolbar-badge">页签备注</span></div>
+      <div class="content">
+        <main class="site">
+          <header class="site-head"><div class="brand"><span class="brand-mark">R</span>Rednote</div><nav class="site-nav"><span>Explore</span><span>Inspiration</span><span>About</span></nav></header>
+          <section class="hero">
+            <div class="hero-copy"><div class="eyebrow">Everyday inspiration</div><h1>Discover and share what inspires you.</h1><p>A clean public demo page used to show how Tab Notes makes similar browser tabs easier to recognize.</p><div class="pills"><span class="pill">Lifestyle</span><span class="pill">Creativity</span><span class="pill">Community</span></div></div>
+            <div class="phone"><div><div class="card-photo tall" style="--a:#ffb5c2;--b:#e94469"></div><div class="caption">City walk inspiration</div><div class="card-photo" style="--a:#ffe3a1;--b:#ec9f39"></div></div><div><div class="card-photo" style="--a:#b8e6d1;--b:#42a97e"></div><div class="caption">Fresh ideas today</div><div class="card-photo tall" style="--a:#c9cdfd;--b:#6a70cf"></div></div></div>
+          </section>
+          <div class="privacy"><i></i>演示内容全部为虚构信息，不包含真实账号或工作数据</div>
+        </main>
+        <aside class="panel">
+          <div class="panel-head"><h2>页签备注</h2><span class="local">仅本机</span></div>
+          <section class="note-card">
+            <h3>当前网页</h3>
+            <label>标签短标题</label><div class="field">Rednote</div>
+            <div class="row"><div><label>分类</label><div class="field">产品资料</div></div><div><label>颜色</label><div class="colors"><i style="--c:#ff99c3" class="selected"></i><i style="--c:#5b8ff9"></i><i style="--c:#61ddaa"></i></div></div></div>
+            <label>详细备注</label><div class="field note">Rednote 是小红书的英文名，用于收藏产品资料与社区灵感。</div>
+            <div class="preview">🩷 Rednote｜Rednote 是小红书的英文名 · Rednote</div>
+            <div class="save">保存备注</div>
+          </section>
+          <h3 class="list-title">网页列表</h3>
+          <div class="item"><strong>Rednote</strong><span>Rednote 是小红书的英文名</span></div>
+          <div class="item"><strong>Dots3 Note Preview</strong><span>多模态模型资料</span></div>
+        </aside>
+      </div>
+    </section>
+  </body>
+</html>

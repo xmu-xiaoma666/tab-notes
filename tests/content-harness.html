@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <title>Rednote 产品资料</title>
+    <style>
+      body { margin: 48px; font: 16px/1.6 system-ui, sans-serif; }
+      button { padding: 8px 12px; }
+    </style>
+  </head>
+  <body>
+    <h1>内容脚本测试页</h1>
+    <p>用于验证标题前缀、动态标题恢复和网页内备注卡。</p>
+    <button id="change-title" type="button">模拟网站动态改标题</button>
+    <button id="delete-note" type="button">模拟删除备注</button>
+    <script>
+      const runtimeListeners = new Set();
+      const harnessNote = {
+        alias: "Rednote",
+        tag: "产品资料",
+        note: "确认标题和备注卡是否正常显示。",
+        color: "#9270CA",
+        showCard: true
+      };
+      globalThis.chrome = {
+        runtime: {
+          onMessage: {
+            addListener(listener) { runtimeListeners.add(listener); },
+            removeListener(listener) { runtimeListeners.delete(listener); }
+          },
+          async sendMessage(message) {
+            if (message.type !== "GET_NOTE") return {};
+            return { note: harnessNote };
+          }
+        }
+      };
+      document.querySelector("#change-title").addEventListener("click", () => {
+        document.title = "Rednote 产品资料（已更新）";
+      });
+      document.querySelector("#delete-note").addEventListener("click", () => {
+        runtimeListeners.forEach((listener) => listener({
+          type: "NOTE_STATE",
+          url: location.href,
+          note: null
+        }));
+      });
+    </script>
+    <script src="../shared.js"></script>
+    <script src="../content.js"></script>
+    <script>globalThis.__TAB_NOTES_CONTENT_LOADED__ = false;</script>
+    <script src="../content.js"></script>
+  </body>
+</html>

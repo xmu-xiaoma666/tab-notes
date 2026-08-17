@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <title>页签备注性能验收</title>
+  </head>
+  <body>
+    <p>正在载入测试面板……</p>
+    <script>
+      (async () => {
+        const response = await fetch("../sidepanel.html");
+        let html = await response.text();
+        html = html
+          .replace('href="sidepanel.css"', 'href="../sidepanel.css"')
+          .replace(
+            '<script src="shared.js"><\/script>',
+            '<script src="mock-chrome.js"><\/script><script src="../shared.js"><\/script>'
+          )
+          .replace('src="sidepanel.js"', 'src="../sidepanel.js"');
+        document.open();
+        document.write(html);
+        document.close();
+      })();
+    </script>
+  </body>
+</html>

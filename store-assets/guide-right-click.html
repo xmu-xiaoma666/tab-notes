@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=1200,height=720,initial-scale=1">
+    <title>右键修改页签备注脱敏截图</title>
+    <style>
+      * { box-sizing: border-box; }
+      html,body { width:1200px;height:720px;margin:0;overflow:hidden; }
+      body { color:#edf1f8;background:#171920;font:14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif; }
+      .window { height:720px;border:1px solid #3a3e48;background:#f7f4f2; }
+      .tabs { height:58px;display:flex;align-items:end;gap:5px;padding:10px 16px 0;background:#171920; }
+      .traffic {display:flex;align-self:center;gap:7px;width:74px;margin-bottom:8px}.traffic i{width:11px;height:11px;border-radius:50%;background:var(--c)}
+      .tab {height:38px;width:330px;display:flex;align-items:center;gap:9px;padding:0 13px;border-radius:11px 11px 0 0;background:#343944;white-space:nowrap;overflow:hidden;}
+      .favicon {width:18px;height:18px;display:grid;place-items:center;border-radius:5px;background:#e3264f;color:#fff;font-size:10px;font-weight:800}.tab span{overflow:hidden;text-overflow:ellipsis}
+      .toolbar {height:52px;display:flex;align-items:center;gap:14px;padding:0 19px;background:#343944;border-bottom:1px solid #414651}.nav{color:#aab3c2;font-size:20px;letter-spacing:8px}.address{height:34px;flex:1;display:flex;align-items:center;padding:0 15px;border-radius:18px;background:#252932;color:#c9d1de}
+      .page {position:relative;height:608px;color:#2b2529;background:linear-gradient(135deg,#fff 0%,#f8eeee 54%,#f3dfe4 100%)}
+      .page-head {height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 48px;background:rgba(255,255,255,.84);border-bottom:1px solid #ecdddf}.brand{display:flex;align-items:center;gap:10px;font-size:21px;font-weight:800}.brand b{width:31px;height:31px;display:grid;place-items:center;border-radius:10px;background:#e3264f;color:#fff;font-size:15px}.links{display:flex;gap:24px;color:#756c71;font-size:13px}
+      .copy {padding:77px 70px}.copy small{color:#e3264f;font-weight:800;letter-spacing:.12em}.copy h1{width:520px;margin:15px 0;color:#261f23;font-size:52px;line-height:1.08}.copy p{width:480px;color:#766c72;font-size:17px;line-height:1.7}
+      .context {position:absolute;left:220px;top:48px;width:330px;padding:9px;border:1px solid #575e69;border-radius:12px;background:#292d35;box-shadow:0 22px 55px rgba(0,0,0,.36)}
+      .menu-row {height:41px;display:flex;align-items:center;gap:12px;padding:0 13px;border-radius:8px;color:#e1e5ed}.menu-row.muted{color:#bdc4d0}.menu-row.active{background:#4d75d2;color:#fff;font-weight:750}.menu-row .ico{width:18px;text-align:center}.divider{height:1px;margin:5px 7px;background:#474d58}
+      .callout {position:absolute;right:65px;bottom:56px;width:370px;padding:22px 24px;border:1px solid #ead3d8;border-radius:18px;background:rgba(255,255,255,.9);box-shadow:0 20px 55px rgba(102,49,65,.12)}.callout b{display:block;margin-bottom:8px;color:#282126;font-size:23px}.callout span{color:#756a70;font-size:15px}.arrow{position:absolute;right:410px;top:240px;color:#e3264f;font-size:50px;transform:rotate(-18deg)}
+      .safe {position:absolute;left:70px;bottom:45px;display:flex;align-items:center;gap:9px;color:#746970;font-size:12px}.safe i{width:9px;height:9px;border-radius:50%;background:#61ddaa;box-shadow:0 0 0 4px rgba(97,221,170,.18)}
+    </style>
+  </head>
+  <body>
+    <section class="window">
+      <header class="tabs"><div class="traffic"><i style="--c:#ff5f57"></i><i style="--c:#febc2e"></i><i style="--c:#28c840"></i></div><div class="tab"><b class="favicon">R</b><span>🩷 Rednote｜Rednote 是小红书的英文名</span></div></header>
+      <div class="toolbar"><span class="nav">‹ › ↻</span><div class="address">https://www.rednote.com/</div></div>
+      <main class="page">
+        <header class="page-head"><div class="brand"><b>R</b>Rednote</div><nav class="links"><span>Explore</span><span>Inspiration</span><span>About</span></nav></header>
+        <section class="copy"><small>PUBLIC DEMO</small><h1>Discover everyday inspiration.</h1><p>这是完全虚构的公开演示页面，仅用于展示页签备注功能。</p></section>
+        <section class="context"><div class="menu-row muted"><span class="ico">＋</span>新建标签页</div><div class="menu-row muted"><span class="ico">↻</span>重新加载</div><div class="divider"></div><div class="menu-row active"><span class="ico">●</span>修改页签备注</div><div class="divider"></div><div class="menu-row muted"><span class="ico">×</span>关闭标签页</div></section>
+        <div class="arrow">↖</div>
+        <aside class="callout"><b>直接右键目标 Tab</b><span>点击“修改页签备注”，一步打开对应网页的编辑器。</span></aside>
+        <div class="safe"><i></i>截图使用 Rednote 虚构示例，不包含真实浏览记录</div>
+      </main>
+    </section>
+  </body>
+</html>

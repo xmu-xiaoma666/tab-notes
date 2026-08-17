@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>页签备注</title>
+    <link rel="stylesheet" href="sidepanel.css">
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">TAB NOTES</p>
+        <h1>页签备注</h1>
+      </div>
+      <span class="local-badge">仅本机</span>
+    </header>
+
+    <main>
+      <section class="panel current-panel" aria-labelledby="current-title">
+        <div class="section-title-row">
+          <h2 id="current-title">当前网页</h2>
+          <span id="save-state" class="save-state" aria-live="polite"></span>
+        </div>
+        <div id="unsupported" class="notice" hidden>这个 Chrome 内部页面不能改标题，但仍可保存备注。</div>
+        <div class="current-page">
+          <img id="current-favicon" class="favicon" alt="">
+          <div class="current-copy">
+            <div id="current-page-title" class="page-title">正在读取…</div>
+            <div id="current-url" class="page-url"></div>
+          </div>
+        </div>
+
+        <form id="note-form">
+          <label for="alias">标签短标题 <span class="hint">显示在标签页最前面</span></label>
+          <input id="alias" name="alias" maxlength="24" placeholder="例如：Rednote、待读文章">
+
+          <div class="two-cols">
+            <div>
+              <label for="tag">分类</label>
+              <input id="tag" name="tag" maxlength="16" list="tag-suggestions" placeholder="实验 / 论文 / 文档">
+              <datalist id="tag-suggestions">
+                <option value="实验"></option>
+                <option value="论文"></option>
+                <option value="文档"></option>
+                <option value="待办"></option>
+                <option value="参考"></option>
+              </datalist>
+            </div>
+            <fieldset>
+              <legend>颜色</legend>
+              <div id="color-picker" class="color-picker"></div>
+            </fieldset>
+          </div>
+
+          <label for="note">详细备注</label>
+          <textarea id="note" name="note" rows="4" maxlength="2000" placeholder="这个网页是什么、下一步做什么、重要参数……"></textarea>
+
+          <label class="toggle-row" for="show-card">
+            <input id="show-card" name="showCard" type="checkbox">
+            <span class="toggle"></span>
+            <span>在网页右上角显示可折叠备注卡</span>
+          </label>
+
+          <div class="title-preview">
+            <span>标签预览</span>
+            <strong id="title-preview">输入短标题后即可预览</strong>
+          </div>
+
+          <div class="form-actions">
+            <button id="delete-button" class="button ghost danger" type="button" hidden>删除</button>
+            <button class="button primary" type="submit">保存备注</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="browser-section" aria-labelledby="tabs-title">
+        <div class="section-title-row sticky-title">
+          <div>
+            <h2 id="tabs-title">网页列表</h2>
+            <p id="tabs-summary" class="summary"></p>
+          </div>
+          <div class="segmented" role="group" aria-label="筛选网页">
+            <button type="button" data-filter="all" class="active">全部</button>
+            <button type="button" data-filter="noted">有备注</button>
+          </div>
+        </div>
+        <label class="search-wrap">
+          <span aria-hidden="true">⌕</span>
+          <input id="search" type="search" placeholder="搜索短标题、分类、备注或网址">
+        </label>
+        <div id="open-tabs" class="item-list"></div>
+
+        <div id="saved-section" hidden>
+          <h3>已保存但未打开</h3>
+          <div id="saved-pages" class="item-list"></div>
+        </div>
+      </section>
+    </main>
+
+    <template id="page-item-template">
+      <button class="page-item" type="button">
+        <span class="item-color"></span>
+        <img class="item-favicon favicon" alt="">
+        <span class="item-copy">
+          <span class="item-heading">
+            <strong class="item-label"></strong>
+            <span class="item-tag"></span>
+          </span>
+          <span class="item-title"></span>
+          <span class="item-note"></span>
+        </span>
+      </button>
+    </template>
+
+    <script src="shared.js"></script>
+    <script src="sidepanel.js"></script>
+  </body>
+</html>
