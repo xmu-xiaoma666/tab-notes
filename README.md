@@ -7,9 +7,9 @@
 - GitHub：https://github.com/xmu-xiaoma666/tab-notes
 - 下载最新版：https://github.com/xmu-xiaoma666/tab-notes/releases/latest
 
-![页签备注功能总览](store-assets/screenshot-1280x800.png)
+![垂直标签栏中的页签备注功能总览](store-assets/screenshot-1280x800.png)
 
-> 公开图片均为在 Chrome 中渲染的脱敏 PNG 截图，统一使用 Rednote 虚构示例；不包含真实账号、浏览记录、内部网址或工作数据。仓库不使用 SVG 宣传素材。
+> 配图来自真实 Chrome 窗口：左侧为 Chrome 垂直标签栏，中间为 `https://www.xiaohongshu.com/explore`，右侧为扩展的实际侧栏；示例备注为“Rednote 是小红书的英文名”。仓库不使用 SVG 宣传素材。
 
 ## 能做什么
 
@@ -44,16 +44,16 @@
 
 ## 快速使用
 
-![从选择标签到保存备注的流程](store-assets/guide-workflow.png)
+![小红书网页与页签备注侧栏细节](store-assets/guide-workflow.png)
 
 ### 方式一：Tab 右键（推荐）
 
-1. 在 Chrome 顶部或左侧标签栏中右键目标标签页。
+1. 在 Chrome 左侧垂直标签栏或顶部水平标签栏中右键目标标签页。
 2. 点击“修改页签备注”。
 3. Chrome 会自动切换到该标签页并打开右侧备注栏。
 4. 修改短标题、分类、颜色或详细备注，然后点击“保存备注”。
 
-![Tab 右键菜单中的修改页签备注](store-assets/guide-right-click.png)
+截图中的布局就是“左侧垂直标签栏 + 中间网页 + 右侧备注栏”。使用水平标签栏时操作完全相同。
 
 ### 方式二：工具栏按钮
 
@@ -82,7 +82,7 @@
 标题显示示例：
 
 ```text
-🩷 Rednote｜Rednote 是小红书的英文名 · Rednote
+🩷 Rednote｜Rednote 是小红书的英文名 · 小红书
 ```
 
 ## 管理网页
