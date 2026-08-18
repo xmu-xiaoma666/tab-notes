@@ -5,7 +5,8 @@
 这是一个无服务器、无账号、无第三方依赖的 Chrome Manifest V3 扩展。所有备注只存放在当前 Chrome 用户的 `chrome.storage.local` 中，不会上传网络。
 
 - GitHub：https://github.com/xmu-xiaoma666/tab-notes
-- 下载最新版：https://github.com/xmu-xiaoma666/tab-notes/releases/latest
+- 最新版本：https://github.com/xmu-xiaoma666/tab-notes/releases/latest
+- 直接下载：[tab-notes v0.4.1 安装包](https://raw.githubusercontent.com/xmu-xiaoma666/tab-notes/main/release/tab-notes-0.4.1-20260818.zip)
 
 ![垂直标签栏中的页签备注功能总览](store-assets/screenshot-1280x800.png)
 
@@ -27,8 +28,8 @@
 
 ### 下载发布版
 
-1. 打开 https://github.com/xmu-xiaoma666/tab-notes/releases/latest 。
-2. 下载最新的 `tab-notes-*.zip`，解压到本地文件夹。
+1. 下载 [tab-notes v0.4.1 安装包](https://raw.githubusercontent.com/xmu-xiaoma666/tab-notes/main/release/tab-notes-0.4.1-20260818.zip)；其他版本可在 [Releases](https://github.com/xmu-xiaoma666/tab-notes/releases/latest) 中查看。
+2. 将 ZIP 解压到本地文件夹。
 3. 在 Chrome 地址栏打开 `chrome://extensions/`。
 4. 打开右上角“开发者模式”。
 5. 点击“加载已解压的扩展程序”，选择刚才解压的文件夹。
