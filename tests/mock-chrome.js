@@ -24,6 +24,7 @@
     favIconUrl: ""
   }));
   let notes = {};
+  let prefixRules = [];
   const counts = { storageGet: 0, storageSet: 0, tabsQuery: 0 };
 
   function exposeCounts() {
@@ -74,6 +75,69 @@
         renderedItems: document.querySelectorAll(".page-item").length,
         savedAlias: notes[activeUrl] && notes[activeUrl].alias
       };
+    },
+    async runPrefixRuleFlow() {
+      const waitFor = async (predicate, message) => {
+        const deadline = performance.now() + 3000;
+        while (!predicate()) {
+          if (performance.now() > deadline) throw new Error(message);
+          await new Promise((resolve) => setTimeout(resolve, 5));
+        }
+      };
+      await waitFor(
+        () => document.querySelectorAll(".page-item").length === tabs.length,
+        "sidepanel initial render timed out"
+      );
+
+      document.querySelector("#rule-prefix").value = "https://example.com/";
+      document.querySelector("#rule-alias").value = "项目默认";
+      document.querySelector("#rule-tag").value = "实验";
+      document.querySelector("#rule-note").value = "前缀默认备注";
+      document.querySelector('[aria-label="选择规则颜色 #9270CA"]').click();
+      document.querySelector("#prefix-rule-form").requestSubmit();
+      await waitFor(
+        () => document.querySelector("#rule-save-state").textContent === "规则已保存",
+        "prefix rule save timed out"
+      );
+      const savedRule = prefixRules[0];
+      const inherited = {
+        alias: document.querySelector("#alias").value,
+        tag: document.querySelector("#tag").value,
+        note: document.querySelector("#note").value,
+        selectedColor: document.querySelector("#color-picker .color-choice.selected")?.title || ""
+      };
+
+      document.querySelector("#alias").value = "单页覆盖";
+      document.querySelector("#tag").value = "待办";
+      document.querySelector("#note").value = "只属于当前网页";
+      document.querySelector('[aria-label="选择颜色 #E8684A"]').click();
+      document.querySelector("#note-form").requestSubmit();
+      await waitFor(
+        () => document.querySelector("#save-state").textContent === "已保存",
+        "exact note save timed out"
+      );
+      const exact = notes[activeUrl];
+
+      document.querySelector("#delete-button").click();
+      await waitFor(
+        () => document.querySelector("#save-state").textContent === "已恢复前缀默认",
+        "exact note delete timed out"
+      );
+      const restored = {
+        alias: document.querySelector("#alias").value,
+        tag: document.querySelector("#tag").value,
+        note: document.querySelector("#note").value,
+        selectedColor: document.querySelector("#color-picker .color-choice.selected")?.title || ""
+      };
+
+      return {
+        savedRule,
+        inherited,
+        exact,
+        restored,
+        ruleListTag: document.querySelector(".rule-item-tag")?.textContent || "",
+        ruleListColor: document.querySelector(".rule-item-color")?.style.background || ""
+      };
     }
   };
 
@@ -83,16 +147,23 @@
         async get() {
           counts.storageGet += 1;
           exposeCounts();
-          return { notesByUrl: notes };
+          return { notesByUrl: notes, prefixRules };
         },
         async set(value) {
           counts.storageSet += 1;
           exposeCounts();
-          const previous = notes;
-          notes = value.notesByUrl || {};
-          queueMicrotask(() => storageChanged.emit({
-            notesByUrl: { oldValue: previous, newValue: notes }
-          }, "local"));
+          const changes = {};
+          if (Object.prototype.hasOwnProperty.call(value, "notesByUrl")) {
+            const previous = notes;
+            notes = value.notesByUrl || {};
+            changes.notesByUrl = { oldValue: previous, newValue: notes };
+          }
+          if (Object.prototype.hasOwnProperty.call(value, "prefixRules")) {
+            const previous = prefixRules;
+            prefixRules = value.prefixRules || [];
+            changes.prefixRules = { oldValue: previous, newValue: prefixRules };
+          }
+          queueMicrotask(() => storageChanged.emit(changes, "local"));
         }
       },
       onChanged: storageChanged

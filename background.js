@@ -5,7 +5,8 @@ importScripts("shared.js");
 const U = globalThis.TabNotesUtils;
 const EDIT_TAB_NOTE_MENU_ID = "edit-tab-note";
 let notesCache = null;
-let notesLoadPromise = null;
+let prefixRulesCache = null;
+let storageLoadPromise = null;
 
 async function ensureContextMenus() {
   await chrome.contextMenus.removeAll();
@@ -18,23 +19,28 @@ async function ensureContextMenus() {
 
 ensureContextMenus().catch(() => {});
 
-async function getNotes() {
-  if (notesCache) return notesCache;
-  if (!notesLoadPromise) {
-    notesLoadPromise = chrome.storage.local.get(U.STORAGE_KEY).then((result) => {
+async function getStoredState() {
+  if (notesCache !== null && prefixRulesCache !== null) {
+    return { notes: notesCache, prefixRules: prefixRulesCache };
+  }
+  if (!storageLoadPromise) {
+    storageLoadPromise = chrome.storage.local.get([U.STORAGE_KEY, U.PREFIX_RULES_KEY]).then((result) => {
       // A storage change may arrive while the first read is in flight. Do not
       // let that older snapshot overwrite the newer onChanged value.
-      if (!notesCache) notesCache = result[U.STORAGE_KEY] || {};
-      return notesCache;
+      if (notesCache === null) notesCache = result[U.STORAGE_KEY] || {};
+      if (prefixRulesCache === null) {
+        prefixRulesCache = U.sanitizePrefixRules(result[U.PREFIX_RULES_KEY]);
+      }
+      return { notes: notesCache, prefixRules: prefixRulesCache };
     }).finally(() => {
-      notesLoadPromise = null;
+      storageLoadPromise = null;
     });
   }
-  return notesLoadPromise;
+  return storageLoadPromise;
 }
 
-function getNoteForUrl(notes, url) {
-  return notes[U.normalizeUrl(url)] || null;
+function getNoteForUrl(state, url, pageTitle) {
+  return U.resolveNoteForUrl(state.notes, state.prefixRules, url, pageTitle);
 }
 
 async function updateBadge(tabId, note) {
@@ -71,10 +77,10 @@ async function sendStateToTab(tabId, url, note) {
   }
 }
 
-async function refreshTab(tab, cachedNotes) {
+async function refreshTab(tab, cachedState) {
   if (!tab || typeof tab.id !== "number") return;
-  const notes = cachedNotes || await getNotes();
-  const note = getNoteForUrl(notes, tab.url || "");
+  const storedState = cachedState || await getStoredState();
+  const note = getNoteForUrl(storedState, tab.url || "", tab.title || "");
   await Promise.all([
     updateBadge(tab.id, note),
     sendStateToTab(tab.id, tab.url || "", note)
@@ -82,8 +88,8 @@ async function refreshTab(tab, cachedNotes) {
 }
 
 async function refreshAllTabs() {
-  const [tabs, notes] = await Promise.all([chrome.tabs.query({}), getNotes()]);
-  await Promise.all(tabs.map((tab) => refreshTab(tab, notes)));
+  const [tabs, storedState] = await Promise.all([chrome.tabs.query({}), getStoredState()]);
+  await Promise.all(tabs.map((tab) => refreshTab(tab, storedState)));
 }
 
 function changedNoteKeys(change) {
@@ -95,11 +101,31 @@ function changedNoteKeys(change) {
   ));
 }
 
-async function refreshChangedTabs(keys, notes) {
-  if (!keys.size) return;
+function changedRulePrefixes(change) {
+  const previous = U.sanitizePrefixRules(change.oldValue);
+  const next = U.sanitizePrefixRules(change.newValue);
+  const previousById = new Map(previous.map((rule) => [rule.id, rule]));
+  const nextById = new Map(next.map((rule) => [rule.id, rule]));
+  const ids = new Set([...previousById.keys(), ...nextById.keys()]);
+  const prefixes = new Set();
+  ids.forEach((id) => {
+    const oldRule = previousById.get(id) || null;
+    const newRule = nextById.get(id) || null;
+    if (JSON.stringify(oldRule) === JSON.stringify(newRule)) return;
+    if (oldRule && oldRule.prefix) prefixes.add(oldRule.prefix);
+    if (newRule && newRule.prefix) prefixes.add(newRule.prefix);
+  });
+  return prefixes;
+}
+
+async function refreshChangedTabs(noteKeys, rulePrefixes, storedState) {
+  if (!noteKeys.size && !rulePrefixes.size) return;
   const tabs = await chrome.tabs.query({});
-  const affected = tabs.filter((tab) => keys.has(U.normalizeUrl(tab.url || "")));
-  await Promise.all(affected.map((tab) => refreshTab(tab, notes)));
+  const affected = tabs.filter((tab) => {
+    const url = U.normalizeUrl(tab.url || "");
+    return noteKeys.has(url) || [...rulePrefixes].some((prefix) => url.startsWith(prefix));
+  });
+  await Promise.all(affected.map((tab) => refreshTab(tab, storedState)));
 }
 
 chrome.runtime.onInstalled.addListener((details) => {
@@ -140,17 +166,24 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 });
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName !== "local" || !changes[U.STORAGE_KEY]) return;
-  const change = changes[U.STORAGE_KEY];
-  notesCache = change.newValue || {};
-  notesLoadPromise = null;
-  refreshChangedTabs(changedNoteKeys(change), notesCache).catch(() => {});
+  if (areaName !== "local") return;
+  const notesChange = changes[U.STORAGE_KEY] || null;
+  const rulesChange = changes[U.PREFIX_RULES_KEY] || null;
+  if (!notesChange && !rulesChange) return;
+  if (notesChange) notesCache = notesChange.newValue || {};
+  if (rulesChange) prefixRulesCache = U.sanitizePrefixRules(rulesChange.newValue);
+  storageLoadPromise = null;
+  const noteKeys = notesChange ? changedNoteKeys(notesChange) : new Set();
+  const rulePrefixes = rulesChange ? changedRulePrefixes(rulesChange) : new Set();
+  getStoredState()
+    .then((storedState) => refreshChangedTabs(noteKeys, rulePrefixes, storedState))
+    .catch(() => {});
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message && message.type === "GET_NOTE") {
-    getNotes()
-      .then((notes) => getNoteForUrl(notes, message.url))
+    getStoredState()
+      .then((storedState) => getNoteForUrl(storedState, message.url, message.pageTitle))
       .then((note) => sendResponse({ note }))
       .catch((error) => sendResponse({ note: null, error: error.message }));
     return true;

@@ -37,21 +37,29 @@ const tabs = Array.from({ length: 100 }, (_, index) => ({
 let notes = {
   [targetUrl]: U.sanitizeNote({ url: targetUrl, alias: "旧备注" })
 };
+let prefixRules = [];
 let storageReads = 0;
 const messagedTabs = [];
 const badgedTabs = [];
+const createdMenus = [];
+const openedPanelWindows = [];
+const focusedWindows = [];
+const activatedTabs = [];
 
 const chrome = {
   contextMenus: {
     removeAll: async () => {},
-    create: () => {},
+    create: (options) => { createdMenus.push(options); },
     onClicked: menuClicked
   },
   storage: {
     local: {
       async get() {
         storageReads += 1;
-        return { [U.STORAGE_KEY]: notes };
+        return {
+          [U.STORAGE_KEY]: notes,
+          [U.PREFIX_RULES_KEY]: prefixRules
+        };
       }
     },
     onChanged: storageChanged
@@ -60,7 +68,7 @@ const chrome = {
     async query() { return tabs; },
     async get(tabId) { return tabs.find((tab) => tab.id === tabId); },
     async sendMessage(tabId) { messagedTabs.push(tabId); },
-    update: async () => {},
+    async update(tabId, options) { activatedTabs.push({ tabId, options }); },
     onActivated: tabActivated,
     onUpdated: tabUpdated
   },
@@ -72,9 +80,11 @@ const chrome = {
   scripting: { executeScript: async () => {} },
   sidePanel: {
     setPanelBehavior: async () => {},
-    open: async () => {}
+    async open(options) { openedPanelWindows.push(options.windowId); }
   },
-  windows: { update: async () => {} },
+  windows: {
+    async update(windowId, options) { focusedWindows.push({ windowId, options }); }
+  },
   runtime: {
     onInstalled: installed,
     onStartup: startup,
@@ -100,6 +110,17 @@ async function requestNote(url) {
 }
 
 (async () => {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(JSON.stringify(createdMenus[0]), JSON.stringify({
+    id: "edit-tab-note",
+    title: "修改页签备注",
+    contexts: ["tab"]
+  }), "the existing tab context-menu entry must remain registered");
+  menuClicked.emit({ menuItemId: "edit-tab-note" }, { id: 7, windowId: 3 });
+  assert.deepEqual(openedPanelWindows, [3]);
+  assert.equal(JSON.stringify(focusedWindows), JSON.stringify([{ windowId: 3, options: { focused: true } }]));
+  assert.equal(JSON.stringify(activatedTabs), JSON.stringify([{ tabId: 7, options: { active: true } }]));
+
   const first = await requestNote(targetUrl);
   const second = await requestNote(targetUrl);
   assert.equal(first.note.alias, "旧备注");
@@ -127,6 +148,30 @@ async function requestNote(url) {
   assert.deepEqual(messagedTabs, [1]);
   assert.deepEqual(badgedTabs, [1]);
   assert.equal(storageReads, 1, "tab activation should also reuse cached notes");
+
+  messagedTabs.length = 0;
+  badgedTabs.length = 0;
+  const previousRules = prefixRules;
+  prefixRules = [U.sanitizePrefixRule({
+    id: "rule-1",
+    prefix: `${otherUrl}/0`,
+    alias: "批量默认标题",
+    tag: "实验",
+    color: "#61DDAA",
+    note: "前缀默认备注"
+  })];
+  storageChanged.emit({
+    [U.PREFIX_RULES_KEY]: { oldValue: previousRules, newValue: prefixRules }
+  }, "local");
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.deepEqual(messagedTabs, [1], "a prefix-rule change should refresh only matching tabs");
+  assert.deepEqual(badgedTabs, [1]);
+
+  const inherited = await requestNote(`${otherUrl}/0`);
+  assert.equal(inherited.note.alias, "批量默认标题");
+  assert.equal(inherited.note.tag, "实验");
+  assert.equal(inherited.note.color, "#61DDAA");
+  assert.equal(inherited.note.note, "前缀默认备注");
 
   console.log("background.js cache and targeted-refresh tests passed");
 })().catch((error) => {

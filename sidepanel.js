@@ -5,13 +5,17 @@
   const state = {
     tabs: [],
     notes: {},
+    prefixRules: [],
     activeTab: null,
     color: U.DEFAULT_COLOR,
+    ruleColor: U.DEFAULT_COLOR,
     filter: "all",
     query: "",
-    windowId: null
+    windowId: null,
+    editingRuleId: ""
   };
-  let expectedStorageSnapshot = null;
+  let expectedNotesSnapshot = null;
+  let expectedRulesSnapshot = null;
   let cachedRenderFrame = null;
 
   const $ = (selector) => document.querySelector(selector);
@@ -20,10 +24,17 @@
   const tagInput = $("#tag");
   const noteInput = $("#note");
   const showCardInput = $("#show-card");
+  const ruleForm = $("#prefix-rule-form");
+  const ruleIdInput = $("#rule-id");
+  const rulePrefixInput = $("#rule-prefix");
+  const ruleAliasInput = $("#rule-alias");
+  const ruleTagInput = $("#rule-tag");
+  const ruleNoteInput = $("#rule-note");
 
-  async function loadNotes() {
-    const result = await chrome.storage.local.get(U.STORAGE_KEY);
+  async function loadStoredData() {
+    const result = await chrome.storage.local.get([U.STORAGE_KEY, U.PREFIX_RULES_KEY]);
     state.notes = result[U.STORAGE_KEY] || {};
+    state.prefixRules = U.sanitizePrefixRules(result[U.PREFIX_RULES_KEY]);
   }
 
   async function loadTabs() {
@@ -37,8 +48,17 @@
     state.activeTab = active[0] || state.tabs.find((tab) => tab.active) || null;
   }
 
+  function matchingRuleFor(tab) {
+    return U.findMatchingPrefixRule(state.prefixRules, tab && tab.url);
+  }
+
   function noteFor(tab) {
-    return state.notes[U.normalizeUrl(tab && tab.url)] || null;
+    return U.resolveNoteForUrl(
+      state.notes,
+      state.prefixRules,
+      tab && tab.url,
+      tab && U.stripTabNotePrefixes(tab.title)
+    );
   }
 
   function renderColors() {
@@ -55,6 +75,24 @@
         state.color = color;
         renderColors();
         renderPreview();
+      });
+      picker.append(button);
+    });
+  }
+
+  function renderRuleColors() {
+    const picker = $("#rule-color-picker");
+    picker.textContent = "";
+    U.COLORS.forEach((color) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `color-choice${color === state.ruleColor ? " selected" : ""}`;
+      button.style.setProperty("--choice", color);
+      button.title = color;
+      button.setAttribute("aria-label", `选择规则颜色 ${color}`);
+      button.addEventListener("click", () => {
+        state.ruleColor = color;
+        renderRuleColors();
       });
       picker.append(button);
     });
@@ -77,7 +115,9 @@
     const tab = state.activeTab;
     if (!tab) return;
     const key = U.normalizeUrl(tab.url);
-    const saved = state.notes[key] || null;
+    const exact = state.notes[key] || null;
+    const rule = matchingRuleFor(tab);
+    const saved = U.resolveNoteForUrl(state.notes, state.prefixRules, tab.url, tab.title);
     $("#current-page-title").textContent = U.stripTabNotePrefixes(tab.title) || "无标题网页";
     $("#current-url").textContent = tab.url || "";
     $("#current-favicon").src = tab.favIconUrl || "";
@@ -88,7 +128,17 @@
     noteInput.value = saved ? saved.note : "";
     showCardInput.checked = saved ? saved.showCard : false;
     state.color = saved ? saved.color : U.DEFAULT_COLOR;
-    $("#delete-button").hidden = !saved;
+    const match = $("#matched-rule");
+    match.hidden = !rule;
+    $("#matched-rule-prefix").textContent = rule ? rule.prefix : "";
+    $("#matched-rule-title").textContent = exact
+      ? "当前单页备注已覆盖前缀默认值"
+      : "已应用网址前缀默认值";
+    $("#alias-hint").textContent = rule && !exact
+      ? "来自前缀默认值，可直接修改"
+      : "显示在标签页最前面";
+    $("#delete-button").hidden = !exact;
+    $("#delete-button").textContent = rule ? "恢复前缀默认" : "删除";
     renderColors();
     renderPreview();
   }
@@ -160,8 +210,9 @@
   }
 
   async function renderAll({ keepEditor = false } = {}) {
-    await Promise.all([loadNotes(), loadTabs()]);
+    await Promise.all([loadStoredData(), loadTabs()]);
     if (!keepEditor) renderCurrent();
+    renderRuleList();
     renderLists();
   }
 
@@ -170,6 +221,7 @@
     cachedRenderFrame = requestAnimationFrame(() => {
       cachedRenderFrame = null;
       if (!keepEditor) renderCurrent();
+      renderRuleList();
       renderLists();
     });
   }
@@ -200,12 +252,16 @@
     }
     latestNotes[key] = saved;
     state.notes = latestNotes;
-    expectedStorageSnapshot = JSON.stringify(latestNotes);
+    if (matchingRuleFor(tab)) {
+      $("#matched-rule-title").textContent = "当前单页备注已覆盖前缀默认值";
+      $("#alias-hint").textContent = "显示在标签页最前面";
+    }
+    expectedNotesSnapshot = JSON.stringify(latestNotes);
     renderFromCache({ keepEditor: true });
     try {
       await chrome.storage.local.set({ [U.STORAGE_KEY]: latestNotes });
     } catch (_error) {
-      expectedStorageSnapshot = null;
+      expectedNotesSnapshot = null;
       $("#save-state").textContent = "保存失败，请重试";
       return;
     }
@@ -222,22 +278,202 @@
     const latestNotes = latestResult[U.STORAGE_KEY] || {};
     delete latestNotes[key];
     state.notes = latestNotes;
-    expectedStorageSnapshot = JSON.stringify(latestNotes);
+    expectedNotesSnapshot = JSON.stringify(latestNotes);
     try {
       await chrome.storage.local.set({ [U.STORAGE_KEY]: latestNotes });
     } catch (_error) {
-      expectedStorageSnapshot = null;
+      expectedNotesSnapshot = null;
       $("#save-state").textContent = "删除失败，请重试";
       return;
     }
     renderCurrent();
     renderLists();
-    $("#save-state").textContent = "已删除";
+    $("#save-state").textContent = matchingRuleFor(tab) ? "已恢复前缀默认" : "已删除";
     setTimeout(() => { $("#save-state").textContent = ""; }, 1600);
+  }
+
+  function makeRuleId() {
+    if (globalThis.crypto && typeof globalThis.crypto.randomUUID === "function") {
+      return globalThis.crypto.randomUUID();
+    }
+    return `rule-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
+
+  function setRuleSaveState(message, clear = true) {
+    $("#rule-save-state").textContent = message;
+    if (clear) setTimeout(() => {
+      if ($("#rule-save-state").textContent === message) $("#rule-save-state").textContent = "";
+    }, 1800);
+  }
+
+  function resetRuleForm() {
+    state.editingRuleId = "";
+    ruleIdInput.value = "";
+    rulePrefixInput.value = "";
+    ruleAliasInput.value = "";
+    ruleTagInput.value = "";
+    ruleNoteInput.value = "";
+    state.ruleColor = U.DEFAULT_COLOR;
+    renderRuleColors();
+    $("#delete-rule-button").hidden = true;
+    $("#rule-save-state").textContent = "";
+    renderRuleList();
+  }
+
+  function editRule(ruleId) {
+    const rule = state.prefixRules.find((candidate) => candidate.id === ruleId);
+    if (!rule) return;
+    state.editingRuleId = rule.id;
+    ruleIdInput.value = rule.id;
+    rulePrefixInput.value = rule.prefix;
+    ruleAliasInput.value = rule.alias;
+    ruleTagInput.value = rule.tag;
+    ruleNoteInput.value = rule.note;
+    state.ruleColor = rule.color;
+    renderRuleColors();
+    $("#delete-rule-button").hidden = false;
+    renderRuleList();
+    $("#prefix-rules-panel").scrollIntoView({ behavior: "smooth", block: "start" });
+    requestAnimationFrame(() => rulePrefixInput.focus());
+  }
+
+  function renderRuleList() {
+    const container = $("#prefix-rule-list");
+    container.textContent = "";
+    const rules = [...state.prefixRules].sort((a, b) =>
+      (b.prefix.length - a.prefix.length) || String(b.updatedAt).localeCompare(String(a.updatedAt))
+    );
+    $("#prefix-rules-summary").textContent = rules.length
+      ? `${rules.length} 条规则 · 最长前缀优先`
+      : "相同网址前缀共用默认备注";
+    rules.forEach((rule) => {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = `rule-item${rule.id === state.editingRuleId ? " active" : ""}`;
+
+      const head = document.createElement("span");
+      head.className = "rule-item-head";
+      const title = document.createElement("span");
+      title.className = "rule-item-title";
+      const color = document.createElement("span");
+      color.className = "rule-item-color";
+      color.style.background = rule.color;
+      const alias = document.createElement("strong");
+      alias.textContent = rule.alias;
+      title.append(color, alias);
+      if (rule.tag) {
+        const tag = document.createElement("span");
+        tag.className = "rule-item-tag";
+        tag.textContent = rule.tag;
+        title.append(tag);
+      }
+      const matches = document.createElement("small");
+      const matchCount = state.tabs.filter((tab) => {
+        const matched = matchingRuleFor(tab);
+        return matched && matched.id === rule.id;
+      }).length;
+      matches.textContent = `${matchCount} 个已打开`;
+      head.append(title, matches);
+
+      const prefix = document.createElement("span");
+      prefix.className = "rule-item-prefix";
+      prefix.textContent = rule.prefix;
+      item.append(head, prefix);
+      if (rule.note) {
+        const note = document.createElement("span");
+        note.className = "rule-item-note";
+        note.textContent = rule.note.replace(/\s+/g, " ");
+        item.append(note);
+      }
+      item.addEventListener("click", () => editRule(rule.id));
+      container.append(item);
+    });
+  }
+
+  async function savePrefixRule(event) {
+    event.preventDefault();
+    const prefix = U.normalizePrefix(rulePrefixInput.value);
+    const alias = U.cleanText(ruleAliasInput.value, 24);
+    if (!prefix) {
+      setRuleSaveState("请输入有效的 http(s) 网址前缀", false);
+      rulePrefixInput.focus();
+      return;
+    }
+    if (!alias) {
+      setRuleSaveState("请填写共用标签短标题", false);
+      ruleAliasInput.focus();
+      return;
+    }
+
+    setRuleSaveState("保存中…", false);
+    const latestResult = await chrome.storage.local.get(U.PREFIX_RULES_KEY);
+    const latestRules = U.sanitizePrefixRules(latestResult[U.PREFIX_RULES_KEY]);
+    const requestedId = ruleIdInput.value || state.editingRuleId;
+    const old = latestRules.find((rule) => rule.id === requestedId) ||
+      latestRules.find((rule) => rule.prefix === prefix) || null;
+    const saved = U.sanitizePrefixRule({
+      id: old ? old.id : requestedId || makeRuleId(),
+      prefix,
+      alias,
+      tag: ruleTagInput.value,
+      color: state.ruleColor,
+      note: ruleNoteInput.value
+    }, old);
+    const nextRules = latestRules.filter((rule) => rule.id !== saved.id && rule.prefix !== saved.prefix);
+    nextRules.push(saved);
+    const sanitizedRules = U.sanitizePrefixRules(nextRules);
+    state.prefixRules = sanitizedRules;
+    state.editingRuleId = saved.id;
+    ruleIdInput.value = saved.id;
+    expectedRulesSnapshot = JSON.stringify(sanitizedRules);
+    renderCurrent();
+    renderRuleList();
+    renderLists();
+    try {
+      await chrome.storage.local.set({ [U.PREFIX_RULES_KEY]: sanitizedRules });
+    } catch (_error) {
+      expectedRulesSnapshot = null;
+      setRuleSaveState("保存失败，请重试", false);
+      return;
+    }
+    $("#delete-rule-button").hidden = false;
+    setRuleSaveState("规则已保存");
+  }
+
+  async function deletePrefixRule() {
+    const ruleId = ruleIdInput.value || state.editingRuleId;
+    if (!ruleId) return;
+    const latestResult = await chrome.storage.local.get(U.PREFIX_RULES_KEY);
+    const latestRules = U.sanitizePrefixRules(latestResult[U.PREFIX_RULES_KEY]);
+    const nextRules = latestRules.filter((rule) => rule.id !== ruleId);
+    state.prefixRules = nextRules;
+    expectedRulesSnapshot = JSON.stringify(nextRules);
+    try {
+      await chrome.storage.local.set({ [U.PREFIX_RULES_KEY]: nextRules });
+    } catch (_error) {
+      expectedRulesSnapshot = null;
+      setRuleSaveState("删除失败，请重试", false);
+      return;
+    }
+    resetRuleForm();
+    renderCurrent();
+    renderLists();
+    setRuleSaveState("规则已删除");
   }
 
   form.addEventListener("submit", saveCurrent);
   $("#delete-button").addEventListener("click", deleteCurrent);
+  ruleForm.addEventListener("submit", savePrefixRule);
+  $("#delete-rule-button").addEventListener("click", deletePrefixRule);
+  $("#new-rule-button").addEventListener("click", resetRuleForm);
+  $("#use-current-url").addEventListener("click", () => {
+    rulePrefixInput.value = state.activeTab ? U.normalizeUrl(state.activeTab.url) : "";
+    rulePrefixInput.focus();
+  });
+  $("#edit-matched-rule").addEventListener("click", () => {
+    const rule = matchingRuleFor(state.activeTab);
+    if (rule) editRule(rule.id);
+  });
   [aliasInput, tagInput, noteInput].forEach((input) => input.addEventListener("input", renderPreview));
   $("#search").addEventListener("input", (event) => {
     state.query = event.target.value;
@@ -255,16 +491,33 @@
   });
 
   chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName !== "local" || !changes[U.STORAGE_KEY]) return;
-    const nextNotes = changes[U.STORAGE_KEY].newValue || {};
-    state.notes = nextNotes;
-    const nextSnapshot = JSON.stringify(nextNotes);
-    if (expectedStorageSnapshot === nextSnapshot) {
-      expectedStorageSnapshot = null;
-      return;
+    if (areaName !== "local") return;
+    let shouldRender = false;
+    let shouldRefreshEditor = false;
+    if (changes[U.STORAGE_KEY]) {
+      const nextNotes = changes[U.STORAGE_KEY].newValue || {};
+      state.notes = nextNotes;
+      const nextSnapshot = JSON.stringify(nextNotes);
+      if (expectedNotesSnapshot === nextSnapshot) {
+        expectedNotesSnapshot = null;
+      } else {
+        expectedNotesSnapshot = null;
+        shouldRender = true;
+      }
     }
-    expectedStorageSnapshot = null;
-    renderFromCache({ keepEditor: true });
+    if (changes[U.PREFIX_RULES_KEY]) {
+      const nextRules = U.sanitizePrefixRules(changes[U.PREFIX_RULES_KEY].newValue);
+      state.prefixRules = nextRules;
+      const nextSnapshot = JSON.stringify(nextRules);
+      if (expectedRulesSnapshot === nextSnapshot) {
+        expectedRulesSnapshot = null;
+      } else {
+        expectedRulesSnapshot = null;
+        shouldRender = true;
+        shouldRefreshEditor = true;
+      }
+    }
+    if (shouldRender) renderFromCache({ keepEditor: !shouldRefreshEditor });
   });
   chrome.tabs.onActivated.addListener(async ({ tabId, windowId }) => {
     const index = state.tabs.findIndex((tab) => tab.id === tabId);
@@ -310,5 +563,6 @@
     renderFromCache({ keepEditor: true });
   });
 
+  renderRuleColors();
   renderAll();
 })();

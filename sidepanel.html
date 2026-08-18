@@ -30,8 +30,16 @@
           </div>
         </div>
 
+        <div id="matched-rule" class="rule-match" hidden>
+          <div>
+            <strong id="matched-rule-title">已应用网址前缀默认值</strong>
+            <span id="matched-rule-prefix"></span>
+          </div>
+          <button id="edit-matched-rule" class="inline-button" type="button">编辑规则</button>
+        </div>
+
         <form id="note-form">
-          <label for="alias">标签短标题 <span class="hint">显示在标签页最前面</span></label>
+          <label for="alias">标签短标题 <span id="alias-hint" class="hint">显示在标签页最前面</span></label>
           <input id="alias" name="alias" maxlength="24" placeholder="例如：Rednote、待读文章">
 
           <div class="two-cols">
@@ -71,6 +79,52 @@
             <button class="button primary" type="submit">保存备注</button>
           </div>
         </form>
+      </section>
+
+      <section id="prefix-rules-panel" class="panel rules-panel" aria-labelledby="prefix-rules-title">
+        <div class="section-title-row">
+          <div>
+            <h2 id="prefix-rules-title">网址前缀规则</h2>
+            <p id="prefix-rules-summary" class="summary">相同网址前缀共用一个短标题</p>
+          </div>
+          <button id="new-rule-button" class="inline-button" type="button">新建</button>
+        </div>
+        <p class="rules-help">匹配页面会自动使用统一短标题、分类、颜色和默认详细备注；这些字段仍可按单个网页修改。多个规则匹配时，最长前缀优先。</p>
+
+        <form id="prefix-rule-form">
+          <input id="rule-id" type="hidden">
+
+          <label for="rule-prefix">网页地址前缀</label>
+          <div class="prefix-input-row">
+            <input id="rule-prefix" type="url" inputmode="url" placeholder="https://example.com/project/" required>
+            <button id="use-current-url" class="button compact" type="button">当前网址</button>
+          </div>
+
+          <label for="rule-alias">共用标签短标题</label>
+          <input id="rule-alias" maxlength="24" placeholder="例如：项目控制台" required>
+
+          <div class="two-cols">
+            <div>
+              <label for="rule-tag">默认分类</label>
+              <input id="rule-tag" maxlength="16" list="tag-suggestions" placeholder="实验 / 论文 / 文档">
+            </div>
+            <fieldset>
+              <legend>默认颜色</legend>
+              <div id="rule-color-picker" class="color-picker"></div>
+            </fieldset>
+          </div>
+
+          <label for="rule-note">默认详细备注 <span class="hint">可在单个网页中修改</span></label>
+          <textarea id="rule-note" rows="3" maxlength="2000" placeholder="打开这个前缀下的网页时默认显示的备注……"></textarea>
+
+          <div class="form-actions rule-actions">
+            <span id="rule-save-state" class="save-state" aria-live="polite"></span>
+            <button id="delete-rule-button" class="button ghost danger" type="button" hidden>删除规则</button>
+            <button class="button primary" type="submit">保存规则</button>
+          </div>
+        </form>
+
+        <div id="prefix-rule-list" class="rule-list"></div>
       </section>
 
       <section class="browser-section" aria-labelledby="tabs-title">

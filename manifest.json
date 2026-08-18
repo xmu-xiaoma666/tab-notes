@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "页签备注",
-  "version": "0.3.1",
-  "description": "给网页添加短备注、分类和颜色，让大量相似标签页一眼可辨。",
+  "version": "0.4.1",
+  "description": "给网页添加短备注、分类和颜色，并支持按网址前缀设置默认备注。",
   "minimum_chrome_version": "114",
   "permissions": [
     "storage",

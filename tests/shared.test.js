@@ -58,4 +58,61 @@ assert.equal(U.matchesSearch(note, null, "REDNOTE"), true);
 assert.equal(U.matchesSearch(note, null, "论文"), false);
 assert.equal(U.hasContent({ alias: "", tag: "", note: "" }), false);
 
+const broadRule = U.sanitizePrefixRule({
+  id: "rule-broad",
+  prefix: "https://example.com/projects/",
+  alias: "项目页面",
+  note: "默认项目备注",
+  createdAt: "2026-08-18T00:00:00.000Z",
+  updatedAt: "2026-08-18T00:00:00.000Z"
+});
+assert.equal(broadRule.tag, "", "old rules without a category should stay compatible");
+assert.equal(broadRule.color, U.DEFAULT_COLOR, "old rules without a color should use the default");
+const specificRule = U.sanitizePrefixRule({
+  id: "rule-specific",
+  prefix: "https://example.com/projects/repa/",
+  alias: "RePA",
+  tag: "实验",
+  note: "默认查看 RePA 实验",
+  color: "#9270CA",
+  createdAt: "2026-08-18T00:00:01.000Z",
+  updatedAt: "2026-08-18T00:00:01.000Z"
+});
+assert.equal(U.PREFIX_RULES_KEY, "prefixRules");
+assert.equal(U.normalizePrefix(" https://EXAMPLE.com/projects/ "), "https://example.com/projects/");
+assert.equal(U.normalizePrefix("chrome://extensions/"), "");
+assert.equal(
+  U.findMatchingPrefixRule([broadRule, specificRule], "https://example.com/projects/repa/run/1").id,
+  "rule-specific",
+  "the longest matching prefix should win"
+);
+const inherited = U.resolveNoteForUrl(
+  {},
+  [broadRule, specificRule],
+  "https://example.com/projects/repa/run/1",
+  "实验 1"
+);
+assert.equal(inherited.alias, "RePA");
+assert.equal(inherited.tag, "实验");
+assert.equal(inherited.note, "默认查看 RePA 实验");
+assert.equal(inherited.color, "#9270CA");
+assert.equal(inherited.pageTitle, "实验 1");
+
+const exactUrl = "https://example.com/projects/repa/run/1";
+const exactNote = U.sanitizeNote({
+  url: exactUrl,
+  alias: "单页标题",
+  note: "手动修改后的详细备注",
+  color: "#E8684A"
+});
+const resolvedExact = U.resolveNoteForUrl(
+  { [exactUrl]: exactNote },
+  [broadRule, specificRule],
+  exactUrl,
+  "实验 1"
+);
+assert.equal(resolvedExact.alias, "单页标题", "an exact note should keep the original per-page behavior");
+assert.equal(resolvedExact.note, "手动修改后的详细备注");
+assert.equal(resolvedExact.color, "#E8684A");
+
 console.log("shared.js tests passed");

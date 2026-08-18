@@ -162,7 +162,11 @@
     if (!isOwner()) return;
     currentUrl = U.normalizeUrl(location.href);
     try {
-      const response = await chrome.runtime.sendMessage({ type: "GET_NOTE", url: currentUrl });
+      const response = await chrome.runtime.sendMessage({
+        type: "GET_NOTE",
+        url: currentUrl,
+        pageTitle: baseTitle
+      });
       if (!isOwner()) return;
       applyNote(response && response.note);
     } catch (_error) {

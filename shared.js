@@ -2,6 +2,7 @@
   "use strict";
 
   const STORAGE_KEY = "notesByUrl";
+  const PREFIX_RULES_KEY = "prefixRules";
   const DEFAULT_COLOR = "#5B8FF9";
   const COLORS = [
     "#5B8FF9",
@@ -27,6 +28,18 @@
     }
   }
 
+  function normalizePrefix(rawPrefix) {
+    const value = String(rawPrefix || "").trim();
+    if (!value) return "";
+    try {
+      const url = new URL(value);
+      if (url.protocol !== "http:" && url.protocol !== "https:") return "";
+      return url.href;
+    } catch (_error) {
+      return "";
+    }
+  }
+
   function cleanText(value, maxLength) {
     const normalized = String(value || "")
       .replace(/\s+/g, " ")
@@ -47,6 +60,65 @@
       showCard: Boolean(input.showCard),
       createdAt: old.createdAt || now,
       updatedAt: now
+    };
+  }
+
+  function sanitizePrefixRule(input, previous) {
+    const old = previous || {};
+    const now = new Date().toISOString();
+    return {
+      id: cleanText(input.id || old.id, 100),
+      prefix: normalizePrefix(input.prefix || old.prefix || ""),
+      alias: cleanText(input.alias, 24),
+      tag: cleanText(input.tag, 16),
+      note: String(input.note || "").trim().slice(0, 2000),
+      color: COLORS.includes(input.color) ? input.color : DEFAULT_COLOR,
+      createdAt: old.createdAt || input.createdAt || now,
+      updatedAt: input.updatedAt || now
+    };
+  }
+
+  function sanitizePrefixRules(input) {
+    if (!Array.isArray(input)) return [];
+    const byPrefix = new Map();
+    input.forEach((candidate) => {
+      const rule = sanitizePrefixRule(candidate, candidate);
+      if (!rule.id || !rule.prefix || !rule.alias) return;
+      const previous = byPrefix.get(rule.prefix);
+      if (!previous || String(rule.updatedAt).localeCompare(String(previous.updatedAt)) >= 0) {
+        byPrefix.set(rule.prefix, rule);
+      }
+    });
+    return [...byPrefix.values()];
+  }
+
+  function findMatchingPrefixRule(rules, rawUrl) {
+    const url = normalizeUrl(rawUrl);
+    if (!url) return null;
+    return sanitizePrefixRules(rules)
+      .filter((rule) => url.startsWith(rule.prefix))
+      .sort((a, b) =>
+        (b.prefix.length - a.prefix.length) ||
+        String(b.updatedAt).localeCompare(String(a.updatedAt))
+      )[0] || null;
+  }
+
+  function resolveNoteForUrl(notes, rules, rawUrl, pageTitle) {
+    const url = normalizeUrl(rawUrl);
+    const exact = (notes && notes[url]) || null;
+    if (exact) return exact;
+    const rule = findMatchingPrefixRule(rules, url);
+    if (!rule) return null;
+    return {
+      url,
+      pageTitle: cleanText(pageTitle, 300),
+      alias: rule.alias,
+      tag: rule.tag,
+      note: rule.note,
+      color: rule.color,
+      showCard: false,
+      createdAt: rule.createdAt,
+      updatedAt: rule.updatedAt
     };
   }
 
@@ -111,11 +183,17 @@
 
   const api = {
     STORAGE_KEY,
+    PREFIX_RULES_KEY,
     DEFAULT_COLOR,
     COLORS,
     normalizeUrl,
+    normalizePrefix,
     cleanText,
     sanitizeNote,
+    sanitizePrefixRule,
+    sanitizePrefixRules,
+    findMatchingPrefixRule,
+    resolveNoteForUrl,
     hasContent,
     colorDot,
     getLabel,
