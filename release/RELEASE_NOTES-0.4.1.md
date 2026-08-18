@@ -23,3 +23,4 @@
 
 - 文件：`tab-notes-0.4.1-20260818.zip`
 - SHA-256：`dbf496fe553c0aab34c2d373c832ac517eb49e95a2b6b1ea3b2c7827365bad68`
+- GitHub 直链：https://raw.githubusercontent.com/xmu-xiaoma666/tab-notes/main/release/tab-notes-0.4.1-20260818.zip
